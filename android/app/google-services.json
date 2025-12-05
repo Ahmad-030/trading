@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "484790897610",
+    "project_id": "tradingapp-18a2c",
+    "storage_bucket": "tradingapp-18a2c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:484790897610:android:0802b2b05285385bbb5d33",
+        "android_client_info": {
+          "package_name": "com.example.tradinggapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCt6xAilaN_d0rGofUU2rceRMNKMvmbLBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
