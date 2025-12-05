@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:trading_signals_app/Screens/HomeScreens/HomeScreen.dart';
 
 import 'AppTheme/App_theme.dart';
 import 'Providers/Auth_provider.dart';
@@ -56,7 +57,7 @@ class TradingSignalsApp extends StatelessWidget {
             title: 'Trade Signals Pro',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.darkTheme,
-            home: const SplashScreen(),
+            home: const Homescreen(),
           );
         },
       ),
