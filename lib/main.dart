@@ -47,8 +47,8 @@ class TradingSignalsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TradingProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: Consumer<ThemeProvider>(
@@ -57,7 +57,7 @@ class TradingSignalsApp extends StatelessWidget {
             title: 'Trade Signals Pro',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.darkTheme,
-            home: const Homescreen(),
+            home: const SplashScreen(),
           );
         },
       ),

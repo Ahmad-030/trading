@@ -192,16 +192,13 @@ class TradingSignal {
   }
 }
 
-// User Model
+// Simplified User Model - No admin or approval fields
 class AppUser {
   final String uid;
   final String email;
   final String displayName;
   final String photoUrl;
-  final bool isApproved;
-  final bool isAdmin;
   final DateTime createdAt;
-  final DateTime? approvedAt;
   final List<String> favoriteSymbols;
   final Map<String, dynamic> preferences;
 
@@ -210,10 +207,7 @@ class AppUser {
     required this.email,
     this.displayName = '',
     this.photoUrl = '',
-    this.isApproved = false,
-    this.isAdmin = false,
     required this.createdAt,
-    this.approvedAt,
     this.favoriteSymbols = const [],
     this.preferences = const {},
   });
@@ -224,16 +218,9 @@ class AppUser {
       email: json['email'] ?? '',
       displayName: json['displayName'] ?? '',
       photoUrl: json['photoUrl'] ?? '',
-      isApproved: json['isApproved'] ?? false,
-      isAdmin: json['isAdmin'] ?? false,
       createdAt: json['createdAt'] is Timestamp
           ? (json['createdAt'] as Timestamp).toDate()
           : DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      approvedAt: json['approvedAt'] != null
-          ? (json['approvedAt'] is Timestamp
-          ? (json['approvedAt'] as Timestamp).toDate()
-          : DateTime.parse(json['approvedAt']))
-          : null,
       favoriteSymbols: List<String>.from(json['favoriteSymbols'] ?? []),
       preferences: Map<String, dynamic>.from(json['preferences'] ?? {}),
     );
@@ -245,10 +232,7 @@ class AppUser {
       'email': email,
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'isApproved': isApproved,
-      'isAdmin': isAdmin,
       'createdAt': createdAt.toIso8601String(),
-      'approvedAt': approvedAt?.toIso8601String(),
       'favoriteSymbols': favoriteSymbols,
       'preferences': preferences,
     };

@@ -7,7 +7,6 @@ import 'package:trading_signals_app/Screens/HomeScreens/HomeScreen.dart';
 import '../../AppTheme/App_theme.dart';
 import '../../Providers/Auth_provider.dart';
 import '../AuthScreens/Login_Screen.dart';
-import '../AuthScreens/Pending_approval_Screen.dart';
 
 
 class SplashScreen extends StatefulWidget {
@@ -65,29 +64,25 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    // Navigate based on auth status
+    // Navigate based on auth status - Simplified to only 2 states
     Widget destination;
 
     if (autoLoginSuccess && authProvider.status == AuthStatus.authenticated) {
       destination = const Homescreen();
-    } else if (authProvider.status == AuthStatus.pendingApproval) {
-      destination = const PendingApprovalScreen();
     } else {
+      // Any other status goes to login
       destination = const LoginScreen();
     }
 
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => destination,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 800),
-      ),
-    );
+    // IMPORTANT: Use Navigator.of(context, rootNavigator: true) to ensure
+    // the new route is created within the Provider scope
+    if (mounted) {
+      Navigator.of(context, rootNavigator: false).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => destination,
+        ),
+      );
+    }
   }
 
   @override

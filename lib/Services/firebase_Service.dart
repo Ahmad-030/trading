@@ -7,9 +7,6 @@ class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Admin credentials - ONLY this email can access admin panel
-  static const String adminEmail = 'ahmadasif2022@gmail.com';
-
   // Singleton pattern
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
@@ -23,11 +20,6 @@ class FirebaseService {
   /// Auth state stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  /// Check if email is admin
-  bool isAdminEmail(String email) {
-    return email.toLowerCase().trim() == adminEmail.toLowerCase();
-  }
-
   /// Register new user with email
   Future<Map<String, dynamic>> registerUser({
     required String email,
@@ -35,11 +27,6 @@ class FirebaseService {
     required String displayName,
   }) async {
     try {
-      // Prevent registering with admin email
-      if (isAdminEmail(email)) {
-        return {'success': false, 'error': 'This email is reserved'};
-      }
-
       // Create auth user
       UserCredential credential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -50,16 +37,13 @@ class FirebaseService {
         return {'success': false, 'error': 'Failed to create user'};
       }
 
-      // Create user document with pending approval status
+      // Create user document - Simple, no approval needed
       await _firestore.collection('users').doc(credential.user!.uid).set({
         'uid': credential.user!.uid,
         'email': email,
         'displayName': displayName,
         'photoUrl': '',
-        'isApproved': false,
-        'isAdmin': false,
         'createdAt': FieldValue.serverTimestamp(),
-        'approvedAt': null,
         'favoriteSymbols': [],
         'preferences': {
           'tradingStyle': 'intraday',
@@ -70,7 +54,7 @@ class FirebaseService {
 
       return {
         'success': true,
-        'message': 'Registration successful! Waiting for admin approval.',
+        'message': 'Registration successful!',
         'userId': credential.user!.uid,
       };
     } on FirebaseAuthException catch (e) {
@@ -95,25 +79,6 @@ class FirebaseService {
         return {'success': false, 'error': 'Login failed'};
       }
 
-      // Check if this is the admin
-      if (isAdminEmail(email)) {
-        // Ensure admin document exists in Firestore
-        await _ensureAdminDocument(credential.user!);
-
-        return {
-          'success': true,
-          'isAdmin': true,
-          'user': AppUser(
-            uid: credential.user!.uid,
-            email: email,
-            displayName: 'Admin',
-            isApproved: true,
-            isAdmin: true,
-            createdAt: DateTime.now(),
-          ),
-        };
-      }
-
       // Check if user document exists
       DocumentSnapshot userDoc =
       await _firestore.collection('users').doc(credential.user!.uid).get();
@@ -125,19 +90,8 @@ class FirebaseService {
 
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
 
-      // Check if user is approved
-      if (userData['isApproved'] != true) {
-        await _auth.signOut();
-        return {
-          'success': false,
-          'error': 'Your account is pending approval. Please wait for admin verification.',
-          'pendingApproval': true,
-        };
-      }
-
       return {
         'success': true,
-        'isAdmin': false,
         'user': AppUser.fromJson(userData),
       };
     } on FirebaseAuthException catch (e) {
@@ -169,33 +123,6 @@ class FirebaseService {
     }
   }
 
-  /// Ensure admin document exists in Firestore
-  Future<void> _ensureAdminDocument(User user) async {
-    final docRef = _firestore.collection('users').doc(user.uid);
-    final doc = await docRef.get();
-
-    if (!doc.exists) {
-      await docRef.set({
-        'uid': user.uid,
-        'email': user.email,
-        'displayName': 'Admin',
-        'photoUrl': '',
-        'isApproved': true,
-        'isAdmin': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'approvedAt': FieldValue.serverTimestamp(),
-        'favoriteSymbols': [],
-        'preferences': {},
-      });
-    } else {
-      // Ensure admin flags are set
-      await docRef.update({
-        'isApproved': true,
-        'isAdmin': true,
-      });
-    }
-  }
-
   /// Logout user
   Future<void> logout() async {
     await _auth.signOut();
@@ -206,18 +133,6 @@ class FirebaseService {
     if (currentUser == null) return null;
 
     try {
-      // Check if admin
-      if (isAdminEmail(currentUser!.email ?? '')) {
-        return AppUser(
-          uid: currentUser!.uid,
-          email: currentUser!.email ?? '',
-          displayName: 'Admin',
-          isApproved: true,
-          isAdmin: true,
-          createdAt: DateTime.now(),
-        );
-      }
-
       DocumentSnapshot doc =
       await _firestore.collection('users').doc(currentUser!.uid).get();
 
@@ -227,93 +142,6 @@ class FirebaseService {
       return null;
     } catch (e) {
       return null;
-    }
-  }
-
-  /// Check if user is approved
-  Future<bool> isUserApproved() async {
-    if (currentUser == null) return false;
-
-    // Admin is always approved
-    if (isAdminEmail(currentUser!.email ?? '')) return true;
-
-    try {
-      DocumentSnapshot doc =
-      await _firestore.collection('users').doc(currentUser!.uid).get();
-
-      if (doc.exists) {
-        return (doc.data() as Map<String, dynamic>)['isApproved'] ?? false;
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Check if current user is admin
-  Future<bool> isCurrentUserAdmin() async {
-    if (currentUser == null) return false;
-    return isAdminEmail(currentUser!.email ?? '');
-  }
-
-  // ==================== ADMIN FUNCTIONS ====================
-
-  /// Approve a user
-  Future<Map<String, dynamic>> approveUser(String userId) async {
-    try {
-      await _firestore.collection('users').doc(userId).update({
-        'isApproved': true,
-        'approvedAt': FieldValue.serverTimestamp(),
-      });
-
-      return {'success': true, 'message': 'User approved successfully'};
-    } catch (e) {
-      return {'success': false, 'error': e.toString()};
-    }
-  }
-
-  /// Decline/Delete a user
-  Future<Map<String, dynamic>> declineUser(String userId) async {
-    try {
-      await _firestore.collection('users').doc(userId).delete();
-      return {'success': true, 'message': 'User declined successfully'};
-    } catch (e) {
-      return {'success': false, 'error': e.toString()};
-    }
-  }
-
-  /// Get pending approvals
-  Future<List<Map<String, dynamic>>> getPendingApprovals() async {
-    try {
-      QuerySnapshot snapshot = await _firestore
-          .collection('users')
-          .where('isApproved', isEqualTo: false)
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        data['docId'] = doc.id;
-        return data;
-      }).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Get all users
-  Future<List<AppUser>> getAllUsers() async {
-    try {
-      QuerySnapshot snapshot = await _firestore
-          .collection('users')
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => AppUser.fromJson(doc.data() as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      return [];
     }
   }
 
@@ -353,7 +181,8 @@ class FirebaseService {
           .get();
 
       return snapshot.docs
-          .map((doc) => TradingSignal.fromJson(doc.data() as Map<String, dynamic>))
+          .map((doc) =>
+          TradingSignal.fromJson(doc.data() as Map<String, dynamic>))
           .toList();
     } catch (e) {
       return [];
@@ -464,7 +293,8 @@ class FirebaseService {
           .get();
 
       List<TradingSignal> signals = snapshot.docs
-          .map((doc) => TradingSignal.fromJson(doc.data() as Map<String, dynamic>))
+          .map((doc) =>
+          TradingSignal.fromJson(doc.data() as Map<String, dynamic>))
           .toList();
 
       int totalSignals = signals.length;
@@ -473,7 +303,8 @@ class FirebaseService {
       int waitSignals = signals.where((s) => s.signalType == 'WAIT').length;
 
       double avgConfidence = totalSignals > 0
-          ? signals.map((s) => s.confidence).reduce((a, b) => a + b) / totalSignals
+          ? signals.map((s) => s.confidence).reduce((a, b) => a + b) /
+          totalSignals
           : 0;
 
       return {
@@ -485,6 +316,45 @@ class FirebaseService {
       };
     } catch (e) {
       return {};
+    }
+  }
+
+  // ==================== USER MANAGEMENT ====================
+
+  /// Get all users (for any admin features you might add later)
+  Future<List<AppUser>> getAllUsers() async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('users')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => AppUser.fromJson(doc.data() as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Delete user account (for user self-deletion)
+  Future<Map<String, dynamic>> deleteUserAccount() async {
+    if (currentUser == null) {
+      return {'success': false, 'error': 'No user logged in'};
+    }
+
+    try {
+      final userId = currentUser!.uid;
+
+      // Delete user document from Firestore
+      await _firestore.collection('users').doc(userId).delete();
+
+      // Delete user authentication
+      await currentUser!.delete();
+
+      return {'success': true, 'message': 'Account deleted successfully'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
     }
   }
 }

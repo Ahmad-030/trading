@@ -6,8 +6,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:trading_signals_app/Screens/HomeScreens/HomeScreen.dart';
 import '../../AppTheme/App_theme.dart';
 import '../../Providers/Auth_provider.dart';
-
-import 'Pending_approval_Screen.dart';
 import 'Register_Screen.dart';
 
 
@@ -81,11 +79,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     if (result['success'] == true) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) =>  Homescreen()),
-      );
-    } else if (result['pendingApproval'] == true) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const PendingApprovalScreen()),
+        MaterialPageRoute(builder: (_) => const Homescreen()),
       );
     } else {
       _showErrorSnackBar(result['error'] ?? 'Login failed');
@@ -261,11 +255,9 @@ class _LoginScreenState extends State<LoginScreen>
 
           const SizedBox(height: 16),
 
-          // Remember me and Forgot password row
+          // Remember me checkbox
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Remember me checkbox
               GestureDetector(
                 onTap: () => setState(() => _rememberMe = !_rememberMe),
                 child: Row(
@@ -303,20 +295,6 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                   ],
-                ),
-              ),
-
-              // Forgot password
-              TextButton(
-                onPressed: () {
-                  // Handle forgot password
-                },
-                child: Text(
-                  'Forgot Password?',
-                  style: GoogleFonts.rajdhani(
-                    color: AppColors.primaryGold,
-                    fontWeight: FontWeight.w600,
-                  ),
                 ),
               ),
             ],
